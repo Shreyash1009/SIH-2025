@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, LogIn, AlertCircle, Waves, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "../context/AuthContext"; // ✨ 1. Import the useAuth hook
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,88 +13,64 @@ export default function LoginPage() {
   
   const navigate = useNavigate();
   const location = useLocation();
+  const { login, currentUser } = useAuth();// ✨ 2. Get the user and login function from the context
 
   // Load saved email if "Remember me" was previously checked
   useEffect(() => {
-    const savedRememberMe = localStorage.getItem('rememberMe');
     const savedEmail = localStorage.getItem('savedEmail');
-    
-    if (savedRememberMe === 'true' && savedEmail) {
+    if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
+  }, []);
 
-    // Check if user is already logged in
-    const userLoggedIn = localStorage.getItem('userLoggedIn');
-    if (userLoggedIn === 'true') {
-      // Get the intended destination or default to home
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
-    }
-  }, [navigate, location]);
+  // Redirect if the user is already logged in
+  useEffect(() => {
+ if (currentUser) {
+    const from = location.state?.from?.pathname || '/';
+     navigate(from, { replace: true });
+   }
+ }, [currentUser, navigate, location]);
 
+  // ✨ 3. UPDATED: This function now performs a real login
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Simulate authentication process
-    setTimeout(() => {
-      // Basic validation - any email/password combination will work for demo
-      if (email && password) {
-        // Determine user role based on email (demo logic)
-        const isAuthority = email.toLowerCase().includes('admin') || 
-                           email.toLowerCase().includes('authority') || 
-                           email.toLowerCase().includes('official');
-        
-        const userData = {
-          email: email,
-          name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
-          role: isAuthority ? 'admin' : 'user',
-          loggedIn: true
-        };
+    try {
+      await login(email, password);
 
-        // Store remember me preference
-        if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
-          localStorage.setItem('savedEmail', email);
-        } else {
-          localStorage.removeItem('rememberMe');
-          localStorage.removeItem('savedEmail');
-        }
-        
-        // Store complete user session data
-        localStorage.setItem('userLoggedIn', 'true');
-        localStorage.setItem('userData', JSON.stringify(userData));
-        
-        alert(`Login successful! Welcome ${userData.name} (${userData.role === 'admin' ? 'Authority' : 'Community Guardian'}).`);
-        
-        // Navigate to intended destination or home
-        const from = location.state?.from?.pathname || '/';
-        navigate(from, { replace: true });
-        
+      // Handle "Remember Me" logic after a successful login
+      if (rememberMe) {
+        localStorage.setItem('savedEmail', email);
       } else {
-        setError("Please enter both email and password.");
+        localStorage.removeItem('savedEmail');
       }
+
+      // The useEffect hook above will handle navigation automatically
+
+    } catch (err) {
+      console.error("Login page error:", err);
+      setError("Invalid email or password. Please try again.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSignupRedirect = () => {
     navigate('/signup');
   };
 
+  // --- No changes are needed in the JSX below this line ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
-      {/* Subtle background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/30 rounded-full -translate-y-48 translate-x-48"></div>
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-100/20 rounded-full translate-y-48 -translate-x-48"></div>
       </div>
-
       <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          {/* Logo & Welcome Section */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 gradient-ocean rounded-full mb-6 shadow-lg">
               <Waves className="w-10 h-10 text-white" />
@@ -101,11 +78,8 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Sign in to continue protecting our coasts</p>
           </div>
-
-          {/* Login Form Card */}
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <form onSubmit={handleLogin} className="space-y-6">
-              {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
@@ -123,8 +97,6 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
-
-              {/* Password Field */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                   Password
@@ -149,8 +121,6 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Remember Me & Forgot Password */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center cursor-pointer">
                   <input 
@@ -169,16 +139,12 @@ export default function LoginPage() {
                   Forgot password?
                 </button>
               </div>
-
-              {/* Error Message */}
               {error && (
                 <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
-
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
@@ -197,8 +163,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            {/* Divider */}
             <div className="relative my-8">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
@@ -207,10 +171,8 @@ export default function LoginPage() {
                 <span className="px-4 bg-white text-gray-500">Or continue with</span>
               </div>
             </div>
-
-            {/* Social Login Buttons */}
             <div className="grid grid-cols-2 gap-3">
-              <button 
+               <button 
                 type="button"
                 onClick={() => alert("Google login coming soon!")}
                 className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -235,8 +197,6 @@ export default function LoginPage() {
                 <span className="text-sm font-medium text-gray-700">GitHub</span>
               </button>
             </div>
-
-            {/* Sign Up Link */}
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}

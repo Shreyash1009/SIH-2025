@@ -4,30 +4,15 @@ import { AlertTriangle, Shield, Users, MapPin, Clock, ChevronRight, Award, Activ
 import { Map, Marker, NavigationControl, Layer, Source } from '@vis.gl/react-maplibre';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { useAuth } from '../context/AuthContext';
 
 const MAPTILER_API_KEY = 'UHRivgU0O6pfNKOH8fEV';
 
 export default function HomePage() {
-  // Updated to use localStorage instead of useAuth context
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [hazards, setHazards] = useState([]);
   const [mapLoading, setMapLoading] = useState(true);
-
-  // Check for current user from localStorage
-  useEffect(() => {
-    const userLoggedIn = localStorage.getItem('userLoggedIn');
-    const userData = localStorage.getItem('userData');
-    
-    if (userLoggedIn === 'true' && userData) {
-      try {
-        setCurrentUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        setCurrentUser(null);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     const fetchHazards = async () => {
@@ -39,62 +24,14 @@ export default function HomePage() {
         setHazards(data);
       } catch (err) {
         console.error(err);
-        // Demo hazards with enhanced coastal focus
+        // Demo hazards
         setHazards([
-          {
-            _id: 'demo1',
-            hazardType: 'tsunami',
-            location: { coordinates: [72.8258, 18.9220], placeName: 'Mumbai Harbor' },
-            description: 'Tsunami warning issued for Mumbai coastline',
-            verified: true,
-            createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            intensity: 9.2
-          },
-          {
-            _id: 'demo2',
-            hazardType: 'high waves',
-            location: { coordinates: [80.2707, 13.0827], placeName: 'Chennai Marina Beach' },
-            description: 'Dangerous high waves reaching 4-5 meters',
-            verified: true,
-            createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-            intensity: 7.8
-          },
-          {
-            _id: 'demo3',
-            hazardType: 'rip current',
-            location: { coordinates: [73.7519, 15.2993], placeName: 'Baga Beach, Goa' },
-            description: 'Strong rip currents detected',
-            verified: true,
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            intensity: 8.5
-          },
-          {
-            _id: 'demo4',
-            hazardType: 'strong currents',
-            location: { coordinates: [88.3639, 22.5726], placeName: 'Sundarbans Delta' },
-            description: 'Strong tidal currents in mangrove channels',
-            verified: true,
-            createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-            intensity: 8.9
-          },
-          {
-            _id: 'demo5',
-            hazardType: 'swell surges',
-            location: { coordinates: [76.2673, 9.9312], placeName: 'Kochi Port' },
-            description: 'Large swell surges affecting port operations',
-            verified: true,
-            createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            intensity: 7.2
-          },
-          {
-            _id: 'demo6',
-            hazardType: 'unusual tides',
-            location: { coordinates: [83.2185, 17.6868], placeName: 'Visakhapatnam Beach' },
-            description: 'Unusual tidal patterns observed',
-            verified: false,
-            createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-            intensity: 6.5
-          }
+          { _id: 'demo1', hazardType: 'tsunami', location: { coordinates: [72.8258, 18.9220], placeName: 'Mumbai Harbor' }, description: 'Tsunami warning issued for Mumbai coastline', verified: true, createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), intensity: 9.2 },
+          { _id: 'demo2', hazardType: 'high waves', location: { coordinates: [80.2707, 13.0827], placeName: 'Chennai Marina Beach' }, description: 'Dangerous high waves reaching 4-5 meters', verified: true, createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), intensity: 7.8 },
+          { _id: 'demo3', hazardType: 'rip current', location: { coordinates: [73.7519, 15.2993], placeName: 'Baga Beach, Goa' }, description: 'Strong rip currents detected', verified: true, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), intensity: 8.5 },
+          { _id: 'demo4', hazardType: 'strong currents', location: { coordinates: [88.3639, 22.5726], placeName: 'Sundarbans Delta' }, description: 'Strong tidal currents in mangrove channels', verified: true, createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), intensity: 8.9 },
+          { _id: 'demo5', hazardType: 'swell surges', location: { coordinates: [76.2673, 9.9312], placeName: 'Kochi Port' }, description: 'Large swell surges affecting port operations', verified: true, createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), intensity: 7.2 },
+          { _id: 'demo6', hazardType: 'unusual tides', location: { coordinates: [83.2185, 17.6868], placeName: 'Visakhapatnam Beach' }, description: 'Unusual tidal patterns observed', verified: false, createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), intensity: 6.5 }
         ]);
       } finally {
         setMapLoading(false);
@@ -122,30 +59,10 @@ export default function HomePage() {
   };
 
   const features = [
-    {
-      icon: <MapPin className="w-6 h-6" />,
-      title: "Instant Geo-Location",
-      description: "Report hazards with automatic location detection for precise alerts",
-      color: "bg-gradient-to-br from-blue-500 to-cyan-500"
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: "Verified Reports",
-      description: "Authority-verified hazards ensure trusted, accurate information",
-      color: "bg-gradient-to-br from-green-500 to-emerald-500"
-    },
-    {
-      icon: <Activity className="w-6 h-6" />,
-      title: "Real-time Monitoring",
-      description: "AI-powered social media scanning detects emerging threats",
-      color: "bg-gradient-to-br from-purple-500 to-pink-500"
-    },
-    {
-      icon: <Users className="w-6 h-6" />,
-      title: "Community Network",
-      description: "Join thousands of coastal guardians protecting our shores",
-      color: "bg-gradient-to-br from-orange-500 to-red-500"
-    }
+    { icon: <MapPin className="w-6 h-6" />, title: "Instant Geo-Location", description: "Report hazards with automatic location detection for precise alerts", color: "bg-gradient-to-br from-blue-500 to-cyan-500" },
+    { icon: <Shield className="w-6 h-6" />, title: "Verified Reports", description: "Authority-verified hazards ensure trusted, accurate information", color: "bg-gradient-to-br from-green-500 to-emerald-500" },
+    { icon: <Activity className="w-6 h-6" />, title: "Real-time Monitoring", description: "AI-powered social media scanning detects emerging threats", color: "bg-gradient-to-br from-purple-500 to-pink-500" },
+    { icon: <Users className="w-6 h-6" />, title: "Community Network", description: "Join thousands of coastal guardians protecting our shores", color: "bg-gradient-to-br from-orange-500 to-red-500" }
   ];
 
   const alerts = [
@@ -176,7 +93,6 @@ export default function HomePage() {
     }
   };
 
-  // India coastline geometry (simplified)
   const indiaCoastlineData = {
     type: 'FeatureCollection',
     features: [
@@ -186,7 +102,6 @@ export default function HomePage() {
         geometry: {
           type: 'LineString',
           coordinates: [
-            // West Coast (Gujarat to Kerala)
             [68.8378, 23.0225], [69.6293, 22.8061], [70.0020, 22.3038],
             [71.1924, 21.7645], [72.5146, 21.2515], [72.8311, 21.1702],
             [73.0169, 20.2540], [73.1812, 19.2183], [72.9081, 19.0760],
@@ -195,14 +110,10 @@ export default function HomePage() {
             [74.3436, 14.5203], [74.7989, 13.4127], [75.1018, 11.6234],
             [75.7804, 11.2588], [76.2673, 9.9312], [76.5762, 9.5916],
             [76.8700, 8.8932], [77.0560, 8.4100], [76.9366, 8.5241],
-            
-            // South Coast (Kerala to Tamil Nadu)
             [77.5946, 8.0883], [78.1348, 8.7860], [78.4867, 9.2647],
             [79.1391, 9.8520], [79.8083, 11.9416], [79.9590, 12.9516],
             [80.1506, 13.0827], [80.2707, 13.0827], [80.2919, 13.0878],
             [80.5135, 13.7600], [81.2979, 16.3066],
-            
-            // East Coast (Tamil Nadu to West Bengal)
             [82.2431, 16.9891], [83.2185, 17.6868], [84.1200, 18.8948],
             [85.0985, 20.9517], [85.8245, 20.2961], [86.4304, 21.4272],
             [87.7570, 21.6469], [88.3639, 22.5726], [88.4279, 22.5726],
@@ -213,20 +124,12 @@ export default function HomePage() {
     ]
   };
 
-  // Animated wave effect data
   const waveAnimationData = {
     type: 'FeatureCollection',
     features: hazards.map((hazard, index) => ({
       type: 'Feature',
-      properties: {
-        intensity: hazard.intensity || 7,
-        delay: index * 200,
-        verified: hazard.verified
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: hazard.location.coordinates
-      }
+      properties: { intensity: hazard.intensity || 7, delay: index * 200, verified: hazard.verified },
+      geometry: { type: 'Point', coordinates: hazard.location.coordinates }
     }))
   };
 
@@ -296,7 +199,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Enhanced Dynamic Map */}
+            {/* Dynamic Map */}
             <div className="relative animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <div className="relative bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl shadow-2xl overflow-hidden h-96 lg:h-[500px] border-2 border-blue-100">
                 {mapLoading ? (
@@ -333,7 +236,6 @@ export default function HomePage() {
                     doubleClickZoom={false}
                     touchZoomRotate={false}
                   >
-                    {/* India Coastline Layer */}
                     <Source type="geojson" data={indiaCoastlineData}>
                       <Layer
                         type="line"
@@ -346,7 +248,6 @@ export default function HomePage() {
                       />
                     </Source>
 
-                    {/* Animated Wave Rings around hazards */}
                     <Source type="geojson" data={waveAnimationData}>
                       <Layer
                         type="circle"
@@ -377,7 +278,6 @@ export default function HomePage() {
                       />
                     </Source>
 
-                    {/* Enhanced Hazard Markers with animation */}
                     {hazards
                       .filter(hazard => hazard.location?.coordinates?.length === 2)
                       .map((hazard, index) => (
@@ -388,7 +288,6 @@ export default function HomePage() {
                           anchor="center"
                         >
                           <div className="relative group">
-                            {/* Pulsing outer ring */}
                             <div 
                               className="absolute inset-0 rounded-full animate-ping opacity-75"
                               style={{
@@ -400,8 +299,6 @@ export default function HomePage() {
                                 animationDelay: `${index * 200}ms`
                               }}
                             />
-                            
-                            {/* Main marker */}
                             <div
                               className="relative cursor-pointer flex items-center justify-center text-white font-bold rounded-full shadow-lg border-3 border-white transition-transform group-hover:scale-110"
                               style={{
@@ -414,26 +311,17 @@ export default function HomePage() {
                             >
                               {getSeverityIcon(hazard.hazardType)}
                             </div>
-                            
-                            {/* Verification badge */}
                             {hazard.verified && (
                               <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1 border-2 border-white animate-bounce">
                                 <Shield className="w-2 h-2 text-white" />
                               </div>
                             )}
-
-                            {/* Tooltip on hover */}
-                            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                              {hazard.hazardType} - {hazard.location.placeName}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                            </div>
                           </div>
                         </Marker>
                       ))}
                   </Map>
                 )}
                 
-                {/* Enhanced overlay button */}
                 <div className="absolute bottom-4 left-4 right-4">
                   <Link
                     to="/map"
@@ -442,7 +330,6 @@ export default function HomePage() {
                     <div className="flex items-center gap-2">
                       <div className="relative">
                         <Activity className="w-5 h-5 animate-pulse" />
-                        <div className="absolute inset-0 w-5 h-5 bg-white/20 rounded-full animate-ping"></div>
                       </div>
                       <span className="font-semibold text-base">Live Hazard Tracking</span>
                     </div>
@@ -450,13 +337,11 @@ export default function HomePage() {
                   </Link>
                 </div>
 
-                {/* Live indicator */}
                 <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold animate-pulse">
                   <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
                   LIVE
                 </div>
 
-                {/* Stats overlay */}
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md">
                   <div className="text-lg font-bold text-gray-900">{hazards.length}</div>
                   <div className="text-xs text-gray-600">Active Hazards</div>
@@ -470,11 +355,14 @@ export default function HomePage() {
       <section className="py-8 bg-white border-y">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, idx) => (
+            {[
+              { label: "Active Alerts", value: "23", change: "+5 today" },
+              { label: "Reports Verified", value: "89%", change: "+2% this week" },
+              { label: "Active Users", value: "1,234", change: "+123 this month" },
+              { label: "Coastal Coverage", value: "7,500km", change: "12 states" }
+            ].map((stat, idx) => (
               <div key={idx} className="text-center animate-slide-up" style={{ animationDelay: `${idx * 0.1}s` }}>
-                <div className="text-2xl lg:text-3xl font-bold text-gray-900">
-                  {stat.value}
-                </div>
+                <div className="text-2xl lg:text-3xl font-bold text-gray-900">{stat.value}</div>
                 <div className="text-sm text-gray-600 mt-1">{stat.label}</div>
                 <div className="text-xs text-green-600 mt-1">{stat.change}</div>
               </div>
@@ -496,9 +384,7 @@ export default function HomePage() {
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    selectedCategory === cat
-                      ? "bg-primary text-white"
-                      : "bg-white text-gray-600 hover:bg-gray-50"
+                    selectedCategory === cat ? "bg-primary text-white" : "bg-white text-gray-600 hover:bg-gray-50"
                   }`}
                 >
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -508,17 +394,17 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {alerts.map((alert, idx) => (
+            {[
+              { id: 1, type: "Rip Current", location: "Baga Beach, Goa", severity: "high", time: "15 mins ago", verified: true, reports: 12, distance: "2.3 km" },
+              { id: 2, type: "Jellyfish Swarm", location: "Marina Beach, Chennai", severity: "medium", time: "1 hour ago", verified: true, reports: 8, distance: "5.7 km" },
+              { id: 3, type: "Oil Spill", location: "Juhu Beach, Mumbai", severity: "low", time: "3 hours ago", verified: false, reports: 3, distance: "12.1 km" }
+            ].map((alert, idx) => (
               <div
                 key={alert.id}
                 className="bg-white rounded-xl shadow-sm hover-lift border border-gray-100 overflow-hidden animate-slide-up"
                 style={{ animationDelay: `${idx * 0.1}s` }}
               >
-                <div className={`h-2 ${
-                  alert.severity === "high" ? "gradient-sunset" :
-                  alert.severity === "medium" ? "bg-warning" : "bg-success"
-                }`}></div>
-                
+                <div className={`h-2 ${alert.severity === "high" ? "gradient-sunset" : alert.severity === "medium" ? "bg-warning" : "bg-success"}`}></div>
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div>
@@ -535,7 +421,6 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
@@ -545,7 +430,6 @@ export default function HomePage() {
                       {alert.severity.toUpperCase()}
                     </span>
                   </div>
-
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <span className="text-xs text-gray-500">
                       {alert.reports} reports • {alert.distance} away
@@ -580,11 +464,7 @@ export default function HomePage() {
                 <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 opacity-10">
                   <div className={`w-full h-full rounded-full ${feature.color}`}></div>
                 </div>
-                
-                <div className={`inline-flex p-3 rounded-lg text-white mb-4 ${feature.color}`}>
-                  {feature.icon}
-                </div>
-                
+                <div className={`inline-flex p-3 rounded-lg text-white mb-4 ${feature.color}`}>{feature.icon}</div>
                 <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
               </div>
@@ -600,17 +480,18 @@ export default function HomePage() {
               <h2 className="text-3xl font-bold text-gray-900">Community Champions</h2>
               <p className="text-gray-600 mt-2">Recognizing our most active coastal guardians</p>
             </div>
-            <Link
-              to="/leaderboard"
-              className="hidden sm:inline-flex items-center text-primary font-medium hover:underline"
-            >
+            <Link to="/leaderboard" className="hidden sm:inline-flex items-center text-primary font-medium hover:underline">
               View Full Leaderboard
               <ChevronRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {topReporters.map((reporter, idx) => (
+            {[
+              { name: "Asha Sharma", location: "Goa", points: 420, badge: "🥇", trend: "+12" },
+              { name: "Raju Kumar", location: "Chennai", points: 360, badge: "🥈", trend: "+8" },
+              { name: "Fatima Khan", location: "Pondicherry", points: 320, badge: "🥉", trend: "+15" }
+            ].map((reporter, idx) => (
               <div
                 key={idx}
                 className="bg-white rounded-xl p-6 shadow-sm hover-lift border border-gray-100 animate-slide-up"
@@ -625,13 +506,10 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
-                      {reporter.points}
-                    </div>
+                    <div className="text-2xl font-bold text-gray-900">{reporter.points}</div>
                     <div className="text-xs text-green-600 font-medium">{reporter.trend}</div>
                   </div>
                 </div>
-                
                 <div className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-yellow-500" />
                   <span className="text-sm text-gray-600">Top Reporter</span>
@@ -641,10 +519,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 text-center">
-            <Link
-              to="/leaderboard"
-              className="inline-flex sm:hidden items-center text-primary font-medium hover:underline"
-            >
+            <Link to="/leaderboard" className="inline-flex sm:hidden items-center text-primary font-medium hover:underline">
               View Full Leaderboard
               <ChevronRight className="w-4 h-4 ml-1" />
             </Link>
@@ -659,27 +534,21 @@ export default function HomePage() {
         </div>
         
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-            Every Report Saves Lives
-          </h2>
+          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">Every Report Saves Lives</h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Join thousands of coastal guardians making our beaches safer. Your vigilance protects communities.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/report"
-              className="inline-flex items-center justify-center px-8 py-4 bg-white text-red-600 rounded-xl font-semibold hover-lift transition-all shadow-lg"
-            >
+            <Link to="/report" className="inline-flex items-center justify-center px-8 py-4 bg-white text-red-600 rounded-xl font-semibold hover-lift transition-all shadow-lg">
               <AlertTriangle className="w-5 h-5 mr-2" />
               Report a Hazard
             </Link>
-            <Link
-              to="/signup"
-              className="inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-xl font-semibold hover:bg-white/20 transition-all"
-            >
-              Become a Guardian
-              <ChevronRight className="w-5 h-5 ml-2" />
-            </Link>
+            {!currentUser && (
+              <Link to="/signup" className="inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 rounded-xl font-semibold hover:bg-white/20 transition-all">
+                Become a Guardian
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </Link>
+            )}
           </div>
         </div>
       </section>
