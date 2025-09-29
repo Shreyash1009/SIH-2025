@@ -1,376 +1,215 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "leaflet.heat";
-import { Users, AlertTriangle, Shield, TrendingUp, Activity } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { formatDistanceToNow } from 'date-fns';
+import { AlertTriangle, CheckCircle, MapPin, BarChart2, UserCheck, MessageSquareWarning } from 'lucide-react';
+import User from '../components/UserComponent';
+import SocialMedia from '../components/SocialMedia';
+import bgImage from '../assets/bg.jpg'; // <-- ADD THIS LINE
 
-const MAPTILER_KEY = "UHRivgU0O6pfNKOH8fEV";
+// --- MAP CONFIGURATION & HELPERS ---
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;// Replace with your actual MapTiler key
 
-function getCurrentUser() {
-  return { name: "John Doe", role: "admin", id: 1 };
-}
-
-// HeatmapLayer integrated inside dashboard
-function HeatmapLayer({ points }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map || !points.length) return;
-
-    const maxIntensity = Math.max(...points.map(([, , intensity = 0.5]) => intensity));
-    if (maxIntensity === 0) return;
-
-    const normalizedPoints = points.map(([lat, lng, intensity = 0.5]) => {
-      const normalizedValue = intensity / maxIntensity;
-      if (normalizedValue > 0.7) return [lat, lng, 1.0];
-      if (normalizedValue > 0.4) return [lat, lng, 0.6];
-      return [lat, lng, 0.3];
-    });
-
-    const gradient = { "0.0": "#06B6D4", "0.5": "#0EA5E9", "1.0": "#EF4444" };
-
-    const heatLayer = L.heatLayer(normalizedPoints, {
-      radius: 25,
-      blur: 15,
-      maxZoom: 17,
-      max: 1.0,
-      minOpacity: 0.3,
-      gradient,
-    }).addTo(map);
-
-    return () => {
-      if (map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
-    };
-  }, [map, points]);
-
-  return null;
-}
-
-// Custom Leaflet Marker Icon
 const getCustomMarkerIcon = (severity) => {
-  let iconColor = "blue";
-  if (severity === "high") iconColor = "red";
-  else if (severity === "medium") iconColor = "orange";
-  else if (severity === "low") iconColor = "green";
-
-  return new L.Icon({
-    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${iconColor}.png`,
-    shadowUrl:
-      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
-  });
+    let iconColor = "blue";
+    if (severity === "High") iconColor = "red";
+    else if (severity === "Medium") iconColor = "orange";
+  
+    return new L.Icon({
+      iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${iconColor}.png`,
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
 };
 
-export default function DashboardPage() {
-  const user = getCurrentUser();
-  const [viewMode, setViewMode] = useState("markers");
+function HeatmapLayer({ points }) {
+    const map = useMap();
+  
+    useEffect(() => {
+      if (!map || !points.length) return;
+      const gradient = { "0.4": "#06B6D4", "0.65": "#0EA5E9", "1.0": "#EF4444" };
+      const heatLayer = L.heatLayer(points, {
+        radius: 25, blur: 15, maxZoom: 17, max: 1.0, minOpacity: 0.4, gradient,
+      }).addTo(map);
+  
+      return () => {
+        if (map.hasLayer(heatLayer)) map.removeLayer(heatLayer);
+      };
+    }, [map, points]);
+  
+    return null;
+}
 
-  const [queue] = useState([
-    {
-      id: 1,
-      type: "Oil Spill",
-      location: "Marina Beach",
-      time: "2h ago",
-      severity: "high",
-      coords: [13.05, 80.2824],
-      source: "user",
-    },
-    {
-      id: 2,
-      type: "Rip Current",
-      location: "Baga Beach",
-      time: "5h ago",
-      severity: "medium",
-      coords: [15.5591, 73.7517],
-      source: "social",
-    },
-    {
-      id: 3,
-      type: "Flood",
-      location: "Alleppey",
-      time: "1h ago",
-      severity: "high",
-      coords: [9.4981, 76.3388],
-      source: "verified",
-    },
-    {
-      id: 4,
-      type: "Beach Erosion",
-      location: "Marina Beach",
-      time: "3h ago",
-      severity: "low",
-      coords: [13.05, 80.2824],
-      source: "user",
-    },
-    {
-      id: 5,
-      type: "Tsunami Alert",
-      location: "Puri",
-      time: "30m ago",
-      severity: "high",
-      coords: [19.8135, 85.8312],
-      source: "verified",
-    },
-    {
-      id: 6,
-      type: "Storm Warning",
-      location: "Goa Coast",
-      time: "4h ago",
-      severity: "medium",
-      coords: [15.2993, 74.124],
-      source: "social",
-    },
-    {
-      id: 7,
-      type: "Plastic Pollution",
-      location: "Rameshwaram",
-      time: "6h ago",
-      severity: "low",
-      coords: [9.2883, 79.3129],
-      source: "user",
-    },
-  ]);
+// --- MOCK DATA ---
+const urgentReportsData = [
+    { id: 1, type: 'Tsunami Warning', location: 'Marina Beach, Chennai', severity: 'High', timestamp: new Date(Date.now() - 2 * 60 * 1000), coords: [13.05, 80.2824] },
+    { id: 2, type: 'High Waves', location: 'Baga Beach, Goa', severity: 'High', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), coords: [15.5591, 73.7517] },
+    { id: 3, type: 'Swell Surges', location: 'Port Area, Mumbai', severity: 'Medium', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), coords: [18.9647, 72.8354] },
+    { id: 4, type: 'Flooding', location: 'Alleppey, Kerala', severity: 'High', timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), coords: [9.4981, 76.3388] },
+    { id: 5, type: 'Unusual Tides', location: 'Puri, Odisha', severity: 'Medium', timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), coords: [19.8135, 85.8312] },
+    { id: 6, type: 'Pollution/Debris', location: 'Versova Beach, Mumbai', severity: 'Medium', timestamp: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), coords: [19.1368, 72.8165] },
+];
 
-  if (!user) return <p>Access Denied</p>;
+// --- POLISHED SUB-COMPONENTS ---
 
-  // Chart data preparation
-  const chartData = queue.reduce((acc, item) => {
-    const found = acc.find((e) => e.location === item.location);
-    if (found) found.alerts += 1;
-    else acc.push({ location: item.location, alerts: 1 });
-    return acc;
-  }, []);
-
-  const severityCount = (sev) => queue.filter((r) => r.severity === sev).length;
-  const sourceCount = (src) => queue.filter((r) => r.source === src).length;
-  const heatPoints = queue.map((r) => [...r.coords, r.severity === "high" ? 1 : r.severity === "medium" ? 0.6 : 0.3]);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-100 to-teal-200 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            CoastWatch
-          </h1>
-          <p className="text-lg text-gray-600">
-            Authority Dashboard — Welcome back,{" "}
-            <span className="font-bold bg-gradient-to-r from-cyan-600 to-blue-700 bg-clip-text text-transparent">{user.name}</span>
-          </p>
+// Redesigned StatCard to look cleaner and more professional
+const StatCard = ({ title, value, icon, color }) => (
+    <div className="bg-white p-5 rounded-xl border border-gray-200/80 shadow-sm">
+        <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-lg ${color.replace('text', 'bg').replace('-500', '-100')}`}>
+                <div className={`${color} w-6 h-6`}>{icon}</div>
+            </div>
+            <div>
+                <p className="text-sm font-medium text-gray-500">{title}</p>
+                <h2 className="text-2xl font-bold text-gray-800">{value}</h2>
+            </div>
         </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {[
-            {
-              icon: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-              label: "New Reports",
-              value: queue.length,
-              trend: "+2",
-              bgColor: "bg-amber-50",
-            },
-            {
-              icon: <Shield className="w-5 h-5 text-emerald-500" />,
-              label: "Verified Incidents",
-              value: sourceCount("verified"),
-              trend: "+1",
-              bgColor: "bg-emerald-50",
-            },
-            {
-              icon: <Users className="w-5 h-5 text-indigo-500" />,
-              label: "High-Priority Alerts",
-              value: severityCount("high"),
-              trend: "+3",
-              bgColor: "bg-indigo-50",
-            },
-            {
-              icon: <TrendingUp className="w-5 h-5 text-blue-500" />,
-              label: "Total Reports",
-              value: queue.length,
-              trend: "+5",
-              bgColor: "bg-blue-50",
-            },
-            {
-              icon: <Activity className="w-5 h-5 text-purple-500" />,
-              label: "Avg. Response Time",
-              value: "1h 15m",
-              trend: "-10m",
-              bgColor: "bg-purple-50",
-            },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-white/20 hover:shadow-md transition-all duration-200"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className={`${stat.bgColor} p-2 rounded-xl`}>
-                  {stat.icon}
-                </div>
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded-full ${
-                    stat.trend.startsWith("+") || stat.trend === "-10m"
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {stat.trend}
-                </span>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {stat.value}
-                </div>
-                <div className="text-sm text-gray-600 font-medium">{stat.label}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content Area (Map & Chart) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Live Map */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/20">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Live Ocean Incidents</h2>
-                <button
-                  onClick={() =>
-                    setViewMode(viewMode === "markers" ? "heatmap" : "markers")
-                  }
-                  className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white text-sm font-medium rounded-full shadow-sm transition-all duration-200"
-                >
-                  Switch to {viewMode === "markers" ? "Heatmap" : "Marker"} View
-                </button>
-              </div>
-              <div className="rounded-xl overflow-hidden border border-gray-200">
-                <MapContainer
-                  center={[13.05, 80.2824]}
-                  zoom={5}
-                  scrollWheelZoom
-                  style={{
-                    height: "400px",
-                    width: "100%",
-                  }}
-                >
-                  <TileLayer
-                    url={`https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`}
-                  />
-                  {viewMode === "markers" &&
-                    queue.map((r) => (
-                      <Marker
-                        key={r.id}
-                        position={r.coords}
-                        icon={getCustomMarkerIcon(r.severity)}
-                      >
-                        <Popup>
-                          <strong className="text-lg">{r.type}</strong>
-                          <br />
-                          <span className="text-gray-700">{r.location}</span>
-                          <br />
-                          <span className="text-sm font-medium">
-                            Severity:{" "}
-                            <span
-                              className={`font-semibold ${
-                                r.severity === "high"
-                                  ? "text-red-600"
-                                  : r.severity === "medium"
-                                  ? "text-orange-500"
-                                  : "text-emerald-600"
-                              }`}
-                            >
-                              {r.severity}
-                            </span>
-                          </span>
-                        </Popup>
-                      </Marker>
-                    ))}
-                  {viewMode === "heatmap" && <HeatmapLayer points={heatPoints} />}
-                </MapContainer>
-              </div>
-            </div>
-
-            {/* Alerts Chart */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/20">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Alerts by Location</h2>
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 40 }}>
-                    <XAxis 
-                      dataKey="location" 
-                      angle={-45} 
-                      textAnchor="end" 
-                      height={60} 
-                      interval={0}
-                      fontSize={11}
-                      stroke="#6B7280"
-                    />
-                    <YAxis fontSize={11} stroke="#6B7280" />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid rgba(203, 213, 225, 0.5)',
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                      }}
-                    />
-                    <Bar dataKey="alerts" fill="#06B6D4" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Report Feed */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/20">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Live Report Feed</h2>
-            <div className="space-y-3 overflow-y-auto" style={{maxHeight: "600px"}}>
-              {queue.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-4 border border-gray-200 rounded-xl bg-white/80 hover:bg-gradient-to-r hover:from-white/90 hover:to-cyan-50/50 transition-all duration-200 cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          item.severity === "high"
-                            ? "bg-red-500"
-                            : item.severity === "medium"
-                            ? "bg-orange-400"
-                            : "bg-emerald-500"
-                        }`}
-                      />
-                      <span className="font-bold text-gray-900 text-sm">{item.type}</span>
-                    </div>
-                    <span
-                      className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        item.source === "verified"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : item.source === "social"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {item.source}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    {item.location} • {item.time}
-                  </div>
-                </div>
-              ))}
-              {queue.length === 0 && (
-                <p className="text-center text-gray-500 italic text-sm">No active reports</p>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  );
+);
+
+
+// Redesigned UrgentReports to use borders instead of boxes for a lighter feel
+const UrgentReports = () => {
+    const getSeverityDotColor = (severity) => {
+        switch (severity) {
+            case 'High': return 'bg-red-500';
+            case 'Medium': return 'bg-yellow-500';
+            default: return 'bg-gray-400';
+        }
+    };
+    return (
+        <div className="bg-white p-6 rounded-xl border border-gray-200/80 shadow-sm h-full flex flex-col">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center flex-shrink-0">
+                <AlertTriangle className="mr-2 h-6 w-6 text-red-500" />Urgent Reports
+            </h3>
+            <div className="space-y-2 flex-grow overflow-y-auto">
+                {urgentReportsData.map(report => (
+                    <div key={report.id} className="py-3 border-b border-gray-200/80 last:border-b-0 flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${getSeverityDotColor(report.severity)}`}></div>
+                        <div className="flex-grow">
+                            <div className="flex items-center justify-between">
+                                <p className="font-semibold text-sm text-gray-800">{report.type}</p>
+                                <span className="text-xs text-gray-500 flex-shrink-0 ml-2">{formatDistanceToNow(report.timestamp, { addSuffix: true })}</span>
+                            </div>
+                            <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                                <MapPin className="mr-1.5 h-3 w-3" /><span>{report.location}</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// IMPORTANT: This component now assumes its children (User, SocialMedia) do NOT have their own white card background.
+const AnalysisSection = () => {
+    const [activeTab, setActiveTab] = useState('user');
+    const baseTabStyles = "px-10 py-2 text-md font-semibold rounded-full transition-all duration-300";
+    const activeTabStyles = "bg-blue-500 shadow text-white"; // Active tab has solid color
+    const inactiveTabStyles = "bg-transparent text-gray-600 hover:text-slate-900";
+
+    return (
+        <div className="mt-8">
+            <div className="flex mb-4">
+                <div className="bg-gray-200/70 p-1.5 rounded-full inline-flex items-center space-x-2">
+                    <button onClick={() => setActiveTab('user')} className={`${baseTabStyles} ${activeTab === 'user' ? activeTabStyles : inactiveTabStyles}`}>User</button>
+                    <button onClick={() => setActiveTab('social')} className={`${baseTabStyles} ${activeTab === 'social' ? activeTabStyles : inactiveTabStyles}`}>Social Media</button>
+                </div>
+            </div>
+            {/* The content below will now sit on the main page background */}
+            <div>
+                {activeTab === 'user' ? <User /> : <SocialMedia />}
+            </div>
+        </div>
+    );
+}
+
+// --- MAIN DASHBOARD LAYOUT ---
+export default function Dashboard() {
+    const [viewMode, setViewMode] = useState("markers");
+
+    const heatPoints = urgentReportsData.map(r => [
+        r.coords[0], r.coords[1], r.severity === "High" ? 1.0 : r.severity === "Medium" ? 0.6 : 0.3
+    ]);
+
+    return (
+        // Changed background to a lighter, cleaner gray
+        
+        <div className="bg-slate-50 min-h-screen">
+            <div className="bg-slate-800 p-6 pb-24">
+                <h2 className="text-5xl font-bold text-white">Dashboard</h2>
+                <p className="text-gray-300">Welcome Back!</p>
+            </div>
+            <div className="px-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-[-4rem] mb-6">
+                    <StatCard title="Total Reports" value="1,482" icon={<BarChart2 />} color="text-orange-500" />
+                    <StatCard title="Citizen Reports" value="971" icon={<UserCheck />} color="text-yellow-500" />
+                    <StatCard title="Social Media Reports" value="112" icon={<MessageSquareWarning />} color="text-blue-500" />
+                    <StatCard title="Verified Reports" value="25" icon={<CheckCircle />} color="text-green-500" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[520px]">
+                    <div className="lg:col-span-2 flex flex-col">
+                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                            <h3 className="text-xl font-bold text-gray-800">Hazard Hotspot Map</h3>
+                            <button
+                                onClick={() => setViewMode(viewMode === "markers" ? "heatmap" : "markers")}
+                                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-full shadow-sm transition-all duration-200"
+                            >
+                                Switch to {viewMode === "markers" ? "Heatmap" : "Marker"} View
+                            </button>
+                        </div>
+                        <div className="flex-grow rounded-xl overflow-hidden border border-gray-200/80 shadow-sm">
+                            <MapContainer
+                                center={[15.3, 78.5]}
+                                zoom={5}
+                                scrollWheelZoom
+                                style={{ height: "100%", width: "100%" }}
+                            >
+                                <TileLayer
+                                    url={`https://api.maptiler.com/maps/streets/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`}
+                                />
+                                {viewMode === "markers" &&
+                                    urgentReportsData.map((r) => (
+                                        <Marker
+                                            key={r.id}
+                                            position={r.coords}
+                                            icon={getCustomMarkerIcon(r.severity)}
+                                        >
+                                            <Popup>
+                                                <strong className="text-base">{r.type}</strong><br />
+                                                <span className="text-gray-700">{r.location}</span><br />
+                                                <span className="text-sm font-medium">
+                                                    Severity:{" "}
+                                                    <span className={`font-semibold ${r.severity === "High" ? "text-red-600" : r.severity === "Medium" ? "text-orange-500" : "text-green-600"}`}>
+                                                        {r.severity}
+                                                    </span>
+                                                </span>
+                                            </Popup>
+                                        </Marker>
+                                    ))}
+                                {viewMode === "heatmap" && <HeatmapLayer points={heatPoints} />}
+                            </MapContainer>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-1">
+                        <UrgentReports />
+                    </div>
+                </div>
+                
+                {/* ACTION REQUIRED: For the "Break out of the box" design,
+                  ensure that the root element in your UserComponent.jsx and SocialMedia.jsx
+                  files does NOT have a card background (e.g. remove bg-white, border, shadow, etc.).
+                  Let them render directly on the page background.
+                */}
+                <AnalysisSection />
+            </div>
+        </div>
+    );
 }

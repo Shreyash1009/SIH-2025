@@ -292,3 +292,16 @@ All colors MUST be HSL.
     z-index: 1;
   }
 }
+
+@keyframes v0-marquee-x {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: v0-marquee-x var(--marquee-duration, 40s) linear infinite;
+}

@@ -14,6 +14,7 @@ import DashboardAnalyst from './pages/DashboardAnalyst';
 import LeaderboardPage from './pages/LeaderboardPage';
 import MyReportsPage from './pages/MyReportsPage';
 import HazardMap from './components/HazardMap';
+import UserReport from './pages/UserReport';
 
 function Layout({ children }) {
   const location = useLocation();
@@ -63,6 +64,7 @@ function AppRoutes() {
 
         {/* Public map (adjust if needed) */}
         <Route path="/map" element={<HazardMap />} />
+        <Route path="/user-report" element={<UserReport />} />
 
         {/* 404 */}
         <Route
