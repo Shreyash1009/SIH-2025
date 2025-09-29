@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Camera, MapPin, AlertTriangle, Upload, Video, Info, CheckCircle, Waves, Wind, Fish, Droplets } from "lucide-react";
+import { MapPin, AlertTriangle, Upload, Info, CheckCircle, Waves, Wind, Fish, Droplets } from "lucide-react";
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../config/firebase';
+
+// Import the new component
+import ReportingGuidelines from '../components/ReportingGuidelines';
+
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function ReportPage() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(null);
+  const { currentUser, loading } = useAuth();
 
   const [description, setDescription] = useState('');
   const [mediaFile, setMediaFile] = useState(null);
@@ -13,11 +20,10 @@ export default function ReportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [locationError, setLocationError] = useState('');
-
   const [mainCategory, setMainCategory] = useState(null);
   const [hazardType, setHazardType] = useState('');
   const [severityLevel, setSeverityLevel] = useState('');
-  
+
   const hazardCategories = {
     natural: [
       { id: "unusual tides", label: "Unusual Tides", icon: <Waves className="w-5 h-5" />, color: "text-blue-600" },
@@ -35,55 +41,24 @@ export default function ReportPage() {
     ]
   };
 
-  const severityLevels = [
-    {
-      id: 'low',
-      label: 'Low',
-      description: 'Minor concern, no immediate danger',
-      bgColor: 'bg-gray-50 hover:bg-gray-100',
-      borderColor: 'border-gray-200',
-      selectedBg: 'bg-gray-100',
-      selectedBorder: 'border-gray-400',
-      textColor: 'text-gray-700'
-    },
-    {
-      id: 'medium',
-      label: 'Medium',
-      description: 'Moderate risk, requires attention',
-      bgColor: 'bg-yellow-50 hover:bg-yellow-100',
-      borderColor: 'border-yellow-200',
-      selectedBg: 'bg-yellow-100',
-      selectedBorder: 'border-yellow-500',
-      textColor: 'text-yellow-800'
-    },
-    {
-      id: 'high',
-      label: 'High',
-      description: 'Serious danger, immediate action needed',
-      bgColor: 'bg-red-50 hover:bg-red-100',
-      borderColor: 'border-red-200',
-      selectedBg: 'bg-red-100',
-      selectedBorder: 'border-red-500',
-      textColor: 'text-red-800'
-    }
-  ];
+  const hazardTypeBackendMap = {
+    "unusual tides": "Unusual Tides",
+    "flooding": "Flooding",
+    "coastal damage": "Coastal damage",
+    "high waves": "High Waves",
+    "swell surges": "Swell Surges",
+    "tsunami": "Tsunami",
+    "oil spill": "Oil Spill",
+    "pollution": "Pollution/Debris",
+    "abnormal sea behaviour": "Abnormal Sea Behaviour",
+    "other": "Other Hazard",
+  };
 
-  // Check authentication status
-  useEffect(() => {
-    const userLoggedIn = localStorage.getItem('userLoggedIn');
-    const userData = localStorage.getItem('userData');
-    
-    if (userLoggedIn === 'true' && userData) {
-      try {
-        setCurrentUser(JSON.parse(userData));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        localStorage.removeItem('userLoggedIn');
-        localStorage.removeItem('userData');
-        setCurrentUser(null);
-      }
-    }
-  }, []);
+  const severityBackendMap = {
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+  };
 
   const fetchLocation = () => {
     setLocationError('');
@@ -96,7 +71,7 @@ export default function ReportPage() {
           });
           toast.success("Location acquired!");
         },
-        (err) => {
+        () => {
           setLocationError('Could not get location. Please enable location services.');
         }
       );
@@ -104,44 +79,62 @@ export default function ReportPage() {
       setLocationError('Geolocation is not supported by this browser.');
     }
   };
-  
+
   useEffect(() => {
     fetchLocation();
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!currentUser) {
       toast.error('You must be logged in to submit a report.');
-      navigate("/login");
-      return;
+      return navigate("/login");
     }
-    if (!location) {
-      return toast.error('Location is required. Please enable location services.');
-    }
-    if (!hazardType) {
-        return toast.error('Please select a hazard type.');
-    }
-    if (!severityLevel) {
-        return toast.error('Please select a severity level.');
-    }
-    if (!description) {
-        return toast.error('Please provide a description.');
-    }
+    if (!location) return toast.error('Location is required. Please enable location services.');
+    if (!mainCategory) return toast.error('Please select a hazard category.');
+    if (!hazardType) return toast.error('Please select a hazard type.');
+    if (!severityLevel) return toast.error('Please select a severity level.');
+    if (!description) return toast.error('Please provide a description.');
+
+    const backendHazardType = hazardTypeBackendMap[hazardType];
+    const backendSeverity = severityBackendMap[severityLevel];
+    const backendCategory = mainCategory;
+
+    if (!backendHazardType) return toast.error('Invalid hazard type selected.');
+    if (!backendSeverity) return toast.error('Invalid severity selected.');
 
     setIsSubmitting(true);
-    
-    // Simulate API call for demo
+
+    const form = new FormData();
+    form.append('latitude', String(location.latitude));
+    form.append('longitude', String(location.longitude));
+    form.append('hazardCategory', backendCategory);
+    form.append('hazardType', backendHazardType);
+    form.append('severityLevel', backendSeverity);
+    form.append('description', description);
+    form.append('reportDate', new Date().toISOString());
+    if (mediaFile) form.append('media', mediaFile);
+
     try {
-      // In a real app, this would be an actual API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      if (!auth.currentUser) throw new Error("Authentication error. Please log in again.");
+      const token = await auth.currentUser.getIdToken();
+
+      const response = await fetch(`${API_URL}/reports`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: form,
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to submit report.');
+
       toast.success('Report submitted successfully!');
       setShowSuccess(true);
       setTimeout(() => navigate("/"), 3000);
-
     } catch (err) {
-      toast.error('Failed to submit report. Please try again.');
+      console.error("Submission error:", err);
+      toast.error(err.message || 'Failed to submit report. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -152,6 +145,14 @@ export default function ReportPage() {
       setMediaFile(e.target.files[0]);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (showSuccess) {
     return (
@@ -192,123 +193,130 @@ export default function ReportPage() {
           </div>
         )}
 
+        {/* --- INSTRUCTIONS COMPONENT ADDED HERE --- */}
+        <ReportingGuidelines />
+
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-8 space-y-8">
-            <div>
-                <h2 className="text-xl font-semibold mb-2">1. Select Hazard Category</h2>
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <button type="button" onClick={() => setMainCategory('natural')} className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${mainCategory === 'natural' ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
-                        <p className="font-semibold text-gray-900">Natural Hazard</p>
-                        <p className="text-sm text-gray-500">Hazards like tides, weather, etc.</p>
-                    </button>
-                    <button type="button" onClick={() => setMainCategory('manmade')} className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${mainCategory === 'manmade' ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
-                        <p className="font-semibold text-gray-900">Man-made Hazard</p>
-                        <p className="text-sm text-gray-500">Hazards like pollution, oil spills, etc.</p>
-                    </button>
-                </div>
+          <div>
+            <h2 className="text-xl font-semibold mb-2">1. Select Hazard Category</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <button type="button" onClick={() => setMainCategory('natural')} className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${mainCategory === 'natural' ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
+                <p className="font-semibold text-gray-900">Natural Hazard</p>
+                <p className="text-sm text-gray-500">Hazards like tides, weather, etc.</p>
+              </button>
+              <button type="button" onClick={() => setMainCategory('manmade')} className={`p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${mainCategory === 'manmade' ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}>
+                <p className="font-semibold text-gray-900">Man-made Hazard</p>
+                <p className="text-sm text-gray-500">Hazards like pollution, oil spills, etc.</p>
+              </button>
             </div>
+          </div>
 
-            {mainCategory && (
-                <div>
-                    <h2 className="text-xl font-semibold mb-4">2. What type of hazard is it?</h2>
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {hazardCategories[mainCategory].map((type) => (
-                            <button key={type.id} type="button" onClick={() => setHazardType(type.id)} className={`p-4 rounded-xl border-2 text-left transition-all ${hazardType === type.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}>
-                                <div className="flex items-center gap-3">
-                                    <div className={type.color}>{type.icon}</div>
-                                    <p className="font-medium text-gray-900">{type.label}</p>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {hazardType && (
-                <div>
-                    <h2 className="text-xl font-semibold mb-4">3. Severity Level</h2>
-                    <div className="grid sm:grid-cols-3 gap-4">
-                        {severityLevels.map((level) => (
-                            <button 
-                                key={level.id} 
-                                type="button" 
-                                onClick={() => setSeverityLevel(level.id)} 
-                                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                                    severityLevel === level.id 
-                                        ? `${level.selectedBg} ${level.selectedBorder}` 
-                                        : `${level.bgColor} ${level.borderColor}`
-                                }`}
-                            >
-                                <div className={`text-lg font-bold mb-1 ${level.textColor}`}>
-                                    {level.label}
-                                </div>
-                                <p className="text-sm text-gray-600">{level.description}</p>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-          
-            {severityLevel && (
-                <div>
-                    <h2 className="text-xl font-semibold mb-4">4. Provide Details</h2>
-                    <div className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                            {location && <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm mb-2">📍 Location Acquired: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</div>}
-                            {locationError && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-2">{locationError}</div>}
-                            <button type="button" onClick={fetchLocation} className="text-sm text-blue-600 hover:underline flex items-center gap-1">
-                                <MapPin className="w-4 h-4" />
-                                Re-acquire current location
-                            </button>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                            <textarea required value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" placeholder="Describe what you observed..." />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-4">Upload photo or video (optional)</label>
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors relative">
-                                {mediaFile ? (
-                                    <div className="space-y-3">
-                                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
-                                    <p className="text-sm text-gray-600">{mediaFile.name}</p>
-                                    <button type="button" onClick={() => setMediaFile(null)} className="text-sm text-red-600 hover:underline">Remove file</button>
-                                    </div>
-                                ) : (
-                                    <>
-                                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                    <p className="text-gray-600 mb-2">Drop files here or click to browse</p>
-                                    <input type="file" accept="image/*,video/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+          {mainCategory && (
             <div>
-                <button 
-                    type="submit" 
-                    disabled={isSubmitting || !currentUser} 
-                    className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg text-lg"
-                    style={{ backgroundColor: isSubmitting || !currentUser ? undefined : 'hsl(16 100% 66%)'}}
-                >
-                    {isSubmitting ? (
-                    <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>Submitting...</span>
-                    </>
+              <h2 className="text-xl font-semibold mb-4">2. What type of hazard is it?</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {hazardCategories[mainCategory].map((type) => (
+                  <button key={type.id} type="button" onClick={() => setHazardType(type.id)} className={`p-4 rounded-xl border-2 text-left transition-all ${hazardType === type.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={type.color}>{type.icon}</div>
+                      <p className="font-medium text-gray-900">{type.label}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hazardType && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">3. Severity Level</h2>
+              <div className="grid sm:grid-cols-3 gap-4">
+                {[
+                  { id: 'low', label: 'Low', description: 'Minor concern, no immediate danger', bgColor: 'bg-gray-50 hover:bg-gray-100', borderColor: 'border-gray-200', selectedBg: 'bg-gray-100', selectedBorder: 'border-gray-400', textColor: 'text-gray-700' },
+                  { id: 'medium', label: 'Medium', description: 'Moderate risk, requires attention', bgColor: 'bg-yellow-50 hover:bg-yellow-100', borderColor: 'border-yellow-200', selectedBg: 'bg-yellow-100', selectedBorder: 'border-yellow-500', textColor: 'text-yellow-800' },
+                  { id: 'high', label: 'High', description: 'Serious danger, immediate action needed', bgColor: 'bg-red-50 hover:bg-red-100', borderColor: 'border-red-200', selectedBg: 'bg-red-100', selectedBorder: 'border-red-500', textColor: 'text-red-800' }
+                ].map((level) => (
+                  <button
+                    key={level.id}
+                    type="button"
+                    onClick={() => setSeverityLevel(level.id)}
+                    className={`p-4 rounded-xl border-2 text-center transition-all ${
+                      severityLevel === level.id
+                        ? `${level.selectedBg} ${level.selectedBorder}`
+                        : `${level.bgColor} ${level.borderColor}`
+                    }`}
+                  >
+                    <div className={`text-lg font-bold mb-1 ${level.textColor}`}>
+                      {level.label}
+                    </div>
+                    <p className="text-sm text-gray-600">{level.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {severityLevel && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">4. Provide Details</h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  {location && <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-sm mb-2">📍 Location Acquired: {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</div>}
+                  {locationError && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 mb-2">{locationError}</div>}
+                  <button type="button" onClick={fetchLocation} className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                    <MapPin className="w-4 h-4" />
+                    Re-acquire current location
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                  <textarea required value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none" placeholder="Describe what you observed..." />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">Upload photo or video (optional)</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors relative">
+                    {mediaFile ? (
+                      <div className="space-y-3">
+                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />
+                        <p className="text-sm text-gray-600">{mediaFile.name}</p>
+                        <button type="button" onClick={() => setMediaFile(null)} className="text-sm text-red-600 hover:underline">Remove file</button>
+                      </div>
                     ) : (
-                    <>
-                        <AlertTriangle className="w-5 h-5" />
-                        <span>Submit Report</span>
-                    </>
+                      <>
+                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600 mb-2">Drop files here or click to browse</p>
+                        <input type="file" accept="image/*,video/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      </>
                     )}
-                </button>
+                  </div>
+                </div>
+              </div>
             </div>
+          )}
+
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting || !currentUser}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg text-lg"
+              style={{ backgroundColor: isSubmitting || !currentUser ? undefined : 'hsl(16 100% 66%)' }}
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-5 h-5" />
+                  <span>Submit Report</span>
+                </>
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
