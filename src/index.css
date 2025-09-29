@@ -125,22 +125,26 @@ All colors MUST be HSL.
 @layer utilities {
   .gradient-ocean {
     background: var(--gradient-ocean);
-    color: white; /* Ensure text is visible on gradient */
+    color: white;
+    /* Ensure text is visible on gradient */
   }
-  
+
   .gradient-sunset {
     background: var(--gradient-sunset);
-    color: white; /* Ensure text is visible on gradient */
+    color: white;
+    /* Ensure text is visible on gradient */
   }
-  
+
   .gradient-depth {
     background: var(--gradient-depth);
-    color: white; /* Ensure text is visible on gradient */
+    color: white;
+    /* Ensure text is visible on gradient */
   }
 
   .gradient-foam {
     background: var(--gradient-foam);
-    color: hsl(var(--ocean-deep)); /* Dark text on light gradient */
+    color: hsl(var(--ocean-deep));
+    /* Dark text on light gradient */
   }
 
   .text-ocean-deep {
@@ -207,30 +211,40 @@ All colors MUST be HSL.
 
   /* Wave animation */
   @keyframes wave {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0);
     }
+
     50% {
       transform: translateY(-10px);
     }
   }
 
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0) rotate(0deg);
     }
+
     33% {
       transform: translateY(-10px) rotate(2deg);
     }
+
     66% {
       transform: translateY(5px) rotate(-2deg);
     }
   }
 
   @keyframes pulse-soft {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.8;
     }
@@ -241,6 +255,7 @@ All colors MUST be HSL.
       transform: translateY(20px);
       opacity: 0;
     }
+
     to {
       transform: translateY(0);
       opacity: 1;
@@ -282,13 +297,34 @@ All colors MUST be HSL.
   }
 
   /* Additional text contrast fixes */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     position: relative;
     z-index: 1;
   }
 
-  p, span, div {
+  p,
+  span,
+  div {
     position: relative;
     z-index: 1;
+  }
+
+  @keyframes v0-marquee-x {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-marquee {
+    animation: v0-marquee-x var(--marquee-duration, 40s) linear infinite;
   }
 }

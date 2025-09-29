@@ -3,13 +3,8 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 
-// Import Components
-import Banner from './components/Banner'; // <-- 1. Import the Banner component
 import NavBar from './components/NavBar';
 import ProtectedRoute from './components/ProtectedRoute';
-import HazardMap from './components/HazardMap';
-
-// Import Pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -18,22 +13,15 @@ import DashboardAuthority from './pages/DashboardAuthority';
 import DashboardAnalyst from './pages/DashboardAnalyst';
 import LeaderboardPage from './pages/LeaderboardPage';
 import MyReportsPage from './pages/MyReportsPage';
+import HazardMap from './components/HazardMap';
+import UserReport from './pages/UserReport';
 
-// This Layout component now controls the visibility of both Banner and NavBar
 function Layout({ children }) {
   const location = useLocation();
-  // Use a more descriptive variable name
-  const hideHeaderAndNav = location.pathname === '/login' || location.pathname === '/signup';
-  
+  const hideNavBar = location.pathname === '/login' || location.pathname === '/signup';
   return (
     <div>
-      {/* 2. Conditionally render both Banner and NavBar together */}
-      {!hideHeaderAndNav && (
-        <>
-          <Banner />
-          <NavBar />
-        </>
-      )}
+      {!hideNavBar && <NavBar />}
       <main>{children}</main>
     </div>
   );
@@ -76,6 +64,7 @@ function AppRoutes() {
 
         {/* Public map (adjust if needed) */}
         <Route path="/map" element={<HazardMap />} />
+        <Route path="/user-report" element={<UserReport />} />
 
         {/* 404 */}
         <Route
