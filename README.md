@@ -1,3 +1,10 @@
+## 🧩 API Documentation
+
+Explore the complete backend API documentation for SeaScan here:
+
+👉 **[API Docs – Ocean Hazard Backend](https://ocean-hazard-backend-sa60.onrender.com/api-docs/)**
+
+
 # 🌊 SeaScan: Integrated Platform for Crowdsourced Ocean Hazard Reporting
 
 ## 📝 Summary
@@ -102,8 +109,4 @@ The platform features **role-based access** for *citizens*, *authorities*, and *
 
 ---
 
-## 🧩 API Documentation
 
-Explore the complete backend API documentation for SeaScan here:
-
-👉 **[API Docs – Ocean Hazard Backend](https://ocean-hazard-backend-sa60.onrender.com/api-docs/)**
